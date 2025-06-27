@@ -1,0 +1,95 @@
+let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+let currentFilter = 'all';
+
+document.getElementById('taskForm').addEventListener('submit', addTask);
+
+function addTask(e) {
+  e.preventDefault();
+  const title = document.getElementById('title').value.trim();
+  const description = document.getElementById('description').value.trim();
+  const dueDate = document.getElementById('dueDate').value;
+
+  if (!title || !dueDate) return;
+
+  const task = {
+    id: Date.now(),
+    title,
+    description,
+    dueDate,
+    completed: false
+  };
+
+  tasks.push(task);
+  saveTasks();
+  renderTasks();
+  e.target.reset();
+}
+
+function saveTasks() {
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+}
+
+function renderTasks() {
+  const list = document.getElementById('taskList');
+  list.innerHTML = '';
+
+  let filtered = tasks;
+  if (currentFilter === 'completed') {
+    filtered = tasks.filter(task => task.completed);
+  } else if (currentFilter === 'incomplete') {
+    filtered = tasks.filter(task => !task.completed);
+  }
+
+  filtered.forEach(task => {
+    const li = document.createElement('li');
+    li.className = `task ${task.completed ? 'completed' : ''}`;
+
+    const now = new Date();
+    const due = new Date(task.dueDate);
+    const daysLeft = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+
+    li.innerHTML = `
+      <strong>${task.title}</strong><br>
+      ${task.description}<br>
+      <small>Due: ${task.dueDate}</small>
+      ${daysLeft <= 2 && !task.completed ? '<div class="reminder">⚠️ Due in ' + daysLeft + ' day(s)</div>' : ''}
+      <div class="actions">
+        <button onclick="toggleComplete(${task.id})">${task.completed ? 'Mark Incomplete' : 'Mark Complete'}</button>
+        <button onclick="editTask(${task.id})">Edit</button>
+        <button onclick="deleteTask(${task.id})">Delete</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function toggleComplete(id) {
+  tasks = tasks.map(task =>
+    task.id === id ? { ...task, completed: !task.completed } : task
+  );
+  saveTasks();
+  renderTasks();
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(task => task.id !== id);
+  saveTasks();
+  renderTasks();
+}
+
+function editTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (task) {
+    document.getElementById('title').value = task.title;
+    document.getElementById('description').value = task.description;
+    document.getElementById('dueDate').value = task.dueDate;
+    deleteTask(id);
+  }
+}
+
+function filterTasks(type) {
+  currentFilter = type;
+  renderTasks();
+}
+
+window.addEventListener('load', renderTasks);
